@@ -9,6 +9,17 @@ namespace Chip8.Chip8
     public class CPU
     {
         /// <summary>
+        /// The location from which most programs start.
+        /// </summary>
+        /// <remarks>
+        /// The first 512 bytes, from 0x000 to 0x1FF, are where the original
+        /// interpreter was located, and should not be used by programs.
+        /// Most Chip-8 programs start at location 0x200 (512),
+        /// but some begin at 0x600 (1536). Programs beginning at 0x600
+        /// are intended for the ETI 660 computer.
+        /// </remarks>
+        private const ushort MemoryStartLocation = 0x200;
+        /// <summary>
         /// 16-key hexadecimal keypad.
         /// </summary>
         private Keyboard _keyboard { get; set; }
@@ -72,8 +83,10 @@ namespace Chip8.Chip8
         /// it is used to point to the topmost level of the stack.
         /// </summary>
         private byte _sp { get; set; }
+        /// <summary>
+        /// Whether or not the execution is paused.
+        /// </summary>
         private bool _paused { get; set; }
-        private byte _speed { get; set; }
 
         public CPU(Keyboard keyboard, Renderer renderer, Speaker speaker)
         {
@@ -81,25 +94,18 @@ namespace Chip8.Chip8
             _renderer = renderer;
             _speaker = speaker;
 
-            // 4KB (4096 bytes) of memory
             _memory = new byte[4096];
 
-            // 16 8-bit registers
             _v = new byte[16];
 
-            // Stores memory addresses. Set this to 0 since we aren't storing anything at initialization.
             _i = 0;
 
-            // Timers
             _delayTimer = 0;
             _soundTimer = 0;
 
-            // Program counter. Stores the currently executing address.
-            _pc = 0x200;
+            _pc = MemoryStartLocation;
             _stack = new ushort[16];
             _sp = 0;
-
-            _speed = 10;
         }
 
         /// <summary>
@@ -108,7 +114,6 @@ namespace Chip8.Chip8
         public void LoadSpritesIntoMemory()
         {
             // Array of hex values for each sprite. Each sprite is 5 bytes.
-            // The technical reference provides us with each one of these values.
             byte[] sprites = new byte[]
             {
                 0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -129,39 +134,51 @@ namespace Chip8.Chip8
                 0xF0, 0x80, 0xF0, 0x80, 0x80  // F
             };
 
-            // According to the technical reference, sprites are stored in the interpreter section of memory starting at hex 0x000
+            // Sprites are stored in the interpreter section of memory starting at 0x000
             for (int i = 0; i < sprites.Length; i++)
-            {
                 _memory[i] = sprites[i];
-            }
         }
 
         /// <summary>
-        /// Loops through the contents of the ROM/program and store it in memory
+        /// Stores the contents of the program in the chip8 memory.
         /// </summary>
-        /// <param name="program"></param>
+        /// <param name="program">Set of instructions.</param>
         public void LoadProgramIntoMemory(byte[] program)
         {
+            Debug.WriteLine("Reading program instructions");
             for (int loc = 0; loc < program.Length; loc++)
             {
-                // The technical reference specifically tells us that "most Chip-8 programs start at location 0x200".
-                // So when we load the ROM into memory, we start at 0x200 and increment from there.
                 _memory[0x200 + loc] = program[loc];
+
+                if (loc + 1 < program.Length)
+                {
+                    if (loc % 2 == 0)
+                        Debug.Write($"0x{Convert.ToString(program[loc], 16).PadLeft(2, '0')}");
+                    else
+                        Debug.WriteLine($"{Convert.ToString(program[loc], 16).PadLeft(2, '0')}");
+                }
             }
+            Debug.WriteLine("End of program instructions");
         }
 
         /// <summary>
-        /// Load a ROM stored in the local memory.
+        /// Loads a ROM stored in the local memory.
         /// </summary>
         /// <param name="path">Local path to the ROM file.</param>
         public void LoadROM(string path)
         {
-            using var sr = new StreamReader(path);
-            string romContent = sr.ReadToEnd();
-            byte[] rom = Encoding.ASCII.GetBytes(romContent);
+            using BinaryWriter reader = new BinaryWriter(File.Open(path, FileMode.Open));
+            var rom = new byte[reader.BaseStream.Length];
+
+            for (int i = 0; i < reader.BaseStream.Length; i++)
+                rom[i] = (byte)reader.BaseStream.ReadByte();
+
             LoadProgramIntoMemory(rom);
         }
 
+        /// <summary>
+        /// Executes CPU cycle.
+        /// </summary>
         public void Cycle()
         {
             // grab that opcode from memory and pass that along to another function
@@ -201,10 +218,10 @@ namespace Chip8.Chip8
                 */
 
                 ushort opcode = (ushort)((_memory[_pc] << 8) | _memory[_pc + 1]);
-                Debug.WriteLine($"Executing opcode 0x{Convert.ToString(opcode, 16)}" +
-                    $" (memory[{_pc}] = 0x{Convert.ToString(_memory[_pc] << 8, 16)} | memory[{_pc+1}] = 0x{Convert.ToString(_memory[_pc + 1], 16)})");
+                Debug.WriteLine($"Executing opcode 0x{Convert.ToString(opcode, 16).PadLeft(4, '0')}" +
+                    $" (memory[{_pc}] = 0x{Convert.ToString(_memory[_pc] << 8, 16).PadLeft(2, '0')} |" +
+                    $" memory[{_pc+1}] = 0x{Convert.ToString(_memory[_pc + 1], 16).PadLeft(2, '0')})");
                 ExecuteInstruction(opcode);
-                _pc += 2;
             }
 
             if (!_paused)
@@ -214,6 +231,9 @@ namespace Chip8.Chip8
             _renderer.Render();
         }
 
+        /// <summary>
+        /// Updates the values of the timers.
+        /// </summary>
         private void UpdateTimers()
         {
             // Each timer, delay and sound, decrement by 1 at a rate of 60Hz.
@@ -244,50 +264,23 @@ namespace Chip8.Chip8
             }
         }
 
-        private ushort Pop(ushort[] stack, byte sp)
-        {
-            ushort address = stack[sp];
-            return address;
-        }
-
-        private void Push(ushort[] stack, byte sp, ushort instruction)
-        {
-            stack[sp] = instruction;
-        }
-
+        /// <summary>
+        /// Executes an instruction.
+        /// </summary>
+        /// <param name="opcode">Hexadecimal instruction.</param>
         private void ExecuteInstruction(ushort opcode)
         {
-            /*
-             * The first piece of information to be aware of is that all instructions are 2 bytes long.
-             * So every time we execute an instruction, or run this function,
-             * we have to increment the program counter (_pc) by 2 so the CPU knows where the next instruction is.
-             */
-
-            // Increment the program counter to prepare it for the next instruction.
-            // Each instruction is 2 bytes long, so increment it by 2.
+             // All instructions are 2 bytes long.
+             // So every time we execute an instruction, or run this function,
+             // we have to increment the program counter (_pc)
+             // by 2 so the CPU knows where the next instruction is.
             _pc += 2;
 
-            /*
-             * nnn or addr  - A 12-bit value, the lowest 12 bits of the instruction
-             * n or nibble  - A 4-bit value, the lowest 4 bits of the instruction
-             * x            - A 4-bit value, the lower 4 bits of the high byte of the instruction
-             * y            - A 4-bit value, the upper 4 bits of the low byte of the instruction
-             * kk or byte   - An 8-bit value, the lowest 8 bits of the instruction
-             */
-
-            var x = (byte)((byte)(opcode >> 8) & 0x000F); // the lower 4 bits of the high byte
-            var y = (byte)((byte)(opcode >> 4) & 0x000F); // the upper 4 bits of the low byte
-            var n = (byte)(opcode & 0x000F); // the lowest 4 bits
-            var kk = (byte)(opcode & 0x00FF); // the lowest 8 bits
-            var nnn = (ushort)(opcode & 0x0FFF); // the lowest 12 bits
-
-            /*
-             * To explain this, let's once again assume we have an instruction 0x5460.
-             * If we & (bitwise AND) that instruction with hex value 0x0F00 we'll end up with 0x0400.
-             * Shift that 8 bits right and we end up with 0x04 or 0x4. Same thing with y.
-             * We & the instruction with hex value 0x00F0 and get 0x0060.
-             * Shift that 4 bits right and we end up with 0x006 or 0x6.
-             */
+            var x   =   (byte)((opcode & 0x0F00) >> 8);   // the lower 4 bits of the high byte
+            var y   =   (byte)((opcode & 0x00F0) >> 4);   // the upper 4 bits of the low byte
+            var n   =   (byte)(opcode & 0x000F);          // the lowest 4 bits
+            var kk  =   (byte)(opcode & 0x00FF);          // the lowest 8 bits
+            var nnn =   (ushort)(opcode & 0x0FFF);        // the lowest 12 bits
 
             switch ((ushort)(opcode & 0xF000))  // grabs the upper 4 bits of the most significant byte of the opcode
             {
@@ -306,7 +299,7 @@ namespace Chip8.Chip8
                             // The interpreter sets the program counter to the address
                             // at the top of the stack, then subtracts 1 from the stack pointer.
                             // This will return us from a subroutine.
-                            _pc = Pop(_stack, _sp);
+                            _pc = _stack[_sp];
                             _sp--;
                             break;
                         default:
@@ -324,9 +317,8 @@ namespace Chip8.Chip8
                     // Call subroutine at nnn.
                     // The interpreter increments the stack pointer,
                     // then puts the current PC on the top of the stack. The PC is then set to nnn.
-                    //_sp++;
-                    //Push(_stack, _sp, _pc);
-                    _stack[++_sp] = _pc;
+                    _sp++;
+                    _stack[_sp] = _pc;
                     _pc = nnn;
                     break;
                 case 0x3000:

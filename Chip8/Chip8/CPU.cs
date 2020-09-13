@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,13 +21,17 @@ namespace Chip8.Chip8
         /// </remarks>
         private const ushort MemoryStartLocation = 0x200;
         /// <summary>
+        /// Width of the display.
+        /// </summary>
+        private const int DisplayWidth = 512;  // 64 pixels * 8 bits
+        /// <summary>
+        /// Height of the display.
+        /// </summary>
+        private const int DisplayHeight = 256;  // 32 pixels * 8 bits
+        /// <summary>
         /// 16-key hexadecimal keypad.
         /// </summary>
         private Keyboard _keyboard { get; set; }
-        /// <summary>
-        /// Monochrome display.
-        /// </summary>
-        private Renderer _renderer { get; set; }
         private Speaker _speaker { get; set; }
         /// <summary>
         /// The Chip-8 language is capable of accessing up to 4KB (4,096 bytes)
@@ -87,11 +92,14 @@ namespace Chip8.Chip8
         /// Whether or not the execution is paused.
         /// </summary>
         private bool _paused { get; set; }
+        /// <summary>
+        /// Table of coordinates that represents the display.
+        /// </summary>
+        public bool[,] Display { get; set; }
 
-        public CPU(Keyboard keyboard, Renderer renderer, Speaker speaker)
+        public CPU(Keyboard keyboard, Speaker speaker)
         {
             _keyboard = keyboard;
-            _renderer = renderer;
             _speaker = speaker;
 
             _memory = new byte[4096];
@@ -106,6 +114,8 @@ namespace Chip8.Chip8
             _pc = MemoryStartLocation;
             _stack = new ushort[16];
             _sp = 0;
+
+            Display = new bool[DisplayWidth, DisplayHeight];
         }
 
         /// <summary>
@@ -220,7 +230,7 @@ namespace Chip8.Chip8
                 ushort opcode = (ushort)((_memory[_pc] << 8) | _memory[_pc + 1]);
                 Debug.WriteLine($"Executing opcode 0x{Convert.ToString(opcode, 16).PadLeft(4, '0')}" +
                     $" (memory[{_pc}] = 0x{Convert.ToString(_memory[_pc] << 8, 16).PadLeft(2, '0')} |" +
-                    $" memory[{_pc+1}] = 0x{Convert.ToString(_memory[_pc + 1], 16).PadLeft(2, '0')})");
+                    $" memory[{_pc + 1}] = 0x{Convert.ToString(_memory[_pc + 1], 16).PadLeft(2, '0')})");
                 ExecuteInstruction(opcode);
             }
 
@@ -228,7 +238,6 @@ namespace Chip8.Chip8
                 UpdateTimers();
 
             PlaySound();
-            _renderer.Render();
         }
 
         /// <summary>
@@ -292,7 +301,7 @@ namespace Chip8.Chip8
                         case 0x00E0:
                             // 00E0 - CLS
                             // Clear the display.
-                            _renderer.Clear();
+                            Display = new bool[DisplayWidth, DisplayHeight];
                             break;
                         case 0x00EE:
                             // 00EE - RET
@@ -481,44 +490,34 @@ namespace Chip8.Chip8
                     // Dxyn - DRW Vx, Vy, nibble
                     // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 
-                    // Each sprite is 8 pixels wide, so it's safe to hardcode that value in
-                    byte width = 8;
+                    /*
+                     * The interpreter reads n bytes from memory, starting at the address stored in I.
+                     * These bytes are then displayed as sprites on screen at coordinates (Vx, Vy).
+                     * Sprites are XORed onto the existing screen. If this causes any pixels to be erased,
+                     * VF is set to 1, otherwise it is set to 0. If the sprite is positioned so part of
+                     * it is outside the coordinates of the display, it wraps around to the opposite side of the screen.
+                     */
 
-                    // Set height to the value of the last nibble (n) of the opcode.
-                    // If our opcode is 0xD235, height will be set to 5
-                    byte height = n;
-
-                    // Set VF to 0, which if necessary, will be set to 1 later on if pixels are erased.
                     _v[0xF] = 0;
-
-                    for (int row = 0; row < height; row++)
+                    for (int i = 0; i < n; i++)
                     {
-                        // Grabs 8-bits of memory, or a single row of a sprite, that's stored at _i + row.
-                        // The technical reference states we start at the address stored in I,
-                        // or _i in our case, when we read sprites from memory.
-                        var sprite = _memory[_i + row];
+                        // Bits are added to the BitArray in the reverse order,
+                        // so 1000 0000 is stored in the array as 0000 0001.
+                        // To get around that, the byte is reversed before being
+                        // added to the array.
+                        BitArray memoryBits = new BitArray(new byte[] { ReverseByte(_memory[_i + i]) });
 
-                        for (ushort col = 0; col < width; col++)
+                        for (int j = 0; j < memoryBits.Length; j++)
                         {
-                            // Grabs the leftmost bit and checks to see if it's greater than 0.
-                            // If the bit (sprite) is not 0, render/erase the pixel.
-                            // A value of 0 indicates that the sprite does not have a pixel at that location,
-                            // so we don't need to worry about drawing or erasing it.
-                            // If the value is 1, we move on to another if statement that checks the return value of SetPixel
-                            if ((sprite & 0x80) > 0)
-                            {
-                                // If setPixel returns 1, which means a pixel was erased, set VF to 1
-                                if (_renderer.SetPixel((byte)(_v[x] + col), (byte)(_v[y] + row)))
-                                {
-                                    _v[0xF] = 1;
-                                }
-                            }
+                            bool oldBit = Display[_v[x] + j, _v[y] + i];
 
-                            // Shift the sprite left 1. This will move the next next col/bit of the sprite into the first position.
-                            // Ex. 10010000 << 1 will become 0010000
-                            sprite <<= 1;
+                            Display[_v[x] + j, _v[y] + i] ^= memoryBits[j];
+
+                            if (oldBit && !Display[_v[x] + j, _v[y] + i])
+                                _v[0xF] = 1;
                         }
                     }
+
                     break;
                 case 0xE000:
                     switch (opcode & 0xFF)
@@ -554,7 +553,8 @@ namespace Chip8.Chip8
                             // Wait for a key press, store the value of the key in Vx.
                             // All execution stops until a key is pressed, then the value of that key is stored in Vx.
                             // TODO: implement properly
-                            throw new NotImplementedException();
+                            _paused = true;
+                            break;
                         case 0x15:
                             // Fx15 - LD DT, Vx
                             // Set delay timer = Vx.
@@ -603,7 +603,7 @@ namespace Chip8.Chip8
                             // The interpreter reads values from memory starting
                             // at location I into registers V0 through Vx.
                             for (int registerIndex = 0; registerIndex <= x; registerIndex++)
-                                _memory[registerIndex] = _v[_i + registerIndex];
+                                _v[registerIndex] = _memory[_i + registerIndex];
                             break;
                         default:
                             throw new Exception($"Unknown opcode 0x{Convert.ToString(opcode, 16)}");
@@ -613,6 +613,19 @@ namespace Chip8.Chip8
                 default:
                     throw new Exception($"Unknown opcode 0x{Convert.ToString(opcode, 16)}");
             }
+        }
+
+        /// <summary>
+        /// Reverses the bits of a byte.
+        /// </summary>
+        /// <param name="b">Byte to be reversed.</param>
+        /// <returns>Reversed byte.</returns>
+        public byte ReverseByte(byte b)
+        {
+            b = (byte)((b & 0xF0) >> 4 | (b & 0x0F) << 4);
+            b = (byte)((b & 0xCC) >> 2 | (b & 0x33) << 2);
+            b = (byte)((b & 0xAA) >> 1 | (b & 0x55) << 1);
+            return b;
         }
     }
 }

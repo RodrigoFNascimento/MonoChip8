@@ -7,23 +7,31 @@ namespace Chip8
 {
     public class Game1 : Game
     {
+        private const int DisplayWidth = 64;
+        private const int DisplayHeight = 32;
+        private const int PixelSize = 10;
+
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        private Texture2D _pixelTexture;
+
         private CPU _cpu { get; set; }
         private Chip8.Keyboard _keyboard { get; set; }
-        private Renderer _renderer { get; set; }
         private Speaker _speaker { get; set; }
 
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
+            _graphics.PreferredBackBufferWidth = 512;
+            _graphics.PreferredBackBufferHeight = 256;
+            _graphics.IsFullScreen = false;
+            _graphics.ApplyChanges();
 
             _keyboard = new Chip8.Keyboard();
-            _renderer = new Renderer();
             _speaker = new Speaker();
 
-            _cpu = new CPU(_keyboard, _renderer, _speaker);
+            _cpu = new CPU(_keyboard, _speaker);
 
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
@@ -51,7 +59,9 @@ namespace Chip8
             // TODO: use this.Content to load your game content here
 
             _cpu.LoadSpritesIntoMemory();
-            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\pong.rom");
+            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Chip8 Picture.ch8");
+
+            _pixelTexture = Content.Load<Texture2D>("pixel");
         }
 
         /// <summary>
@@ -65,8 +75,6 @@ namespace Chip8
                 || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
-
             _cpu.Cycle();
 
             base.Update(gameTime);
@@ -74,9 +82,27 @@ namespace Chip8
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Black);
 
-            // TODO: Add your drawing code here
+            _spriteBatch.Begin();
+
+            for (int i = 0; i < DisplayWidth; i++)
+            {
+                for (int j = 0; j < DisplayHeight; j++)
+                {
+                    if (_cpu.Display[i, j])
+                        _spriteBatch.Draw(
+                            _pixelTexture,
+                            new Rectangle(
+                                i * PixelSize,
+                                j * PixelSize,
+                                PixelSize,
+                                PixelSize),
+                            Color.White);
+                }
+            }
+
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }

@@ -509,11 +509,23 @@ namespace Chip8.Chip8
 
                         for (int j = 0; j < memoryBits.Length; j++)
                         {
-                            bool oldBit = Display[_v[x] + j, _v[y] + i];
+                            int coordinateX = _v[x] + j;
+                            int coordinateY = _v[y] + i;
 
-                            Display[_v[x] + j, _v[y] + i] ^= memoryBits[j];
+                            if (coordinateX > DisplayWidth)
+                                coordinateX -= DisplayWidth;
+                            if (coordinateX < 0)
+                                coordinateX += DisplayWidth;
+                            if (coordinateY > DisplayHeight)
+                                coordinateY -= DisplayHeight;
+                            if (coordinateY < 0)
+                                coordinateY += DisplayHeight;
 
-                            if (oldBit && !Display[_v[x] + j, _v[y] + i])
+                            bool oldBit = Display[coordinateX, coordinateY];
+
+                            Display[coordinateX, coordinateY] ^= memoryBits[j];
+
+                            if (oldBit && !Display[coordinateX, coordinateY])
                                 _v[0xF] = 1;
                         }
                     }

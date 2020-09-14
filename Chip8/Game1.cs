@@ -7,9 +7,7 @@ namespace Chip8
 {
     public class Game1 : Game
     {
-        private const int DisplayWidth = 64;
-        private const int DisplayHeight = 32;
-        private const int PixelSize = 10;
+        private const int PixelSize = 20;
 
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
@@ -22,10 +20,9 @@ namespace Chip8
 
         public Game1()
         {
+            Window.AllowUserResizing = true;
+
             _graphics = new GraphicsDeviceManager(this);
-            _graphics.PreferredBackBufferWidth = 512;
-            _graphics.PreferredBackBufferHeight = 256;
-            _graphics.IsFullScreen = false;
             _graphics.ApplyChanges();
 
             _keyboard = new Chip8.Keyboard();
@@ -59,7 +56,7 @@ namespace Chip8
             // TODO: use this.Content to load your game content here
 
             _cpu.LoadSpritesIntoMemory();
-            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Chip8 Picture.ch8");
+            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Brix [Andreas Gustafsson, 1990].ch8");
 
             _pixelTexture = Content.Load<Texture2D>("pixel");
         }
@@ -86,9 +83,9 @@ namespace Chip8
 
             _spriteBatch.Begin();
 
-            for (int i = 0; i < DisplayWidth; i++)
+            for (int i = 0; i < CPU.DisplayWidth; i++)
             {
-                for (int j = 0; j < DisplayHeight; j++)
+                for (int j = 0; j < CPU.DisplayHeight; j++)
                 {
                     if (_cpu.Display[i, j])
                         _spriteBatch.Draw(

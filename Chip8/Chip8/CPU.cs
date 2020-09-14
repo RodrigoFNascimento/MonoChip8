@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 
 namespace Chip8.Chip8
 {
@@ -191,6 +189,8 @@ namespace Chip8.Chip8
         /// </summary>
         public void Cycle()
         {
+            ushort opcode = (ushort)((_memory[_pc] << 8) | _memory[_pc + 1]);
+
             // grab that opcode from memory and pass that along to another function
             // that'll handle the execution of that instruction
             if (!_paused)
@@ -226,18 +226,25 @@ namespace Chip8.Chip8
                  * 
                  * 0x1000 | 0xF0 = 0x10F0
                 */
-
-                ushort opcode = (ushort)((_memory[_pc] << 8) | _memory[_pc + 1]);
+                
                 Debug.WriteLine($"Executing opcode 0x{Convert.ToString(opcode, 16).PadLeft(4, '0')}" +
                     $" (memory[{_pc}] = 0x{Convert.ToString(_memory[_pc] << 8, 16).PadLeft(2, '0')} |" +
                     $" memory[{_pc + 1}] = 0x{Convert.ToString(_memory[_pc + 1], 16).PadLeft(2, '0')})");
                 ExecuteInstruction(opcode);
-            }
-
-            if (!_paused)
                 UpdateTimers();
-
-            PlaySound();
+                PlaySound();
+            }
+            else
+            {
+                byte? keyPressed = _keyboard.GetPressedKey();
+                if (keyPressed != null)
+                {
+                    byte x = (byte)((opcode & 0x0F00) >> 8);
+                    _v[x] = (byte)keyPressed;
+                    _paused = false;
+                    Cycle();
+                }
+            }
         }
 
         /// <summary>
@@ -552,7 +559,6 @@ namespace Chip8.Chip8
                             // Fx0A - LD Vx, K
                             // Wait for a key press, store the value of the key in Vx.
                             // All execution stops until a key is pressed, then the value of that key is stored in Vx.
-                            // TODO: implement properly
                             _paused = true;
                             break;
                         case 0x15:

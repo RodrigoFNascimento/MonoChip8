@@ -21,11 +21,11 @@ namespace Chip8.Chip8
         /// <summary>
         /// Width of the display.
         /// </summary>
-        private const int DisplayWidth = 512;  // 64 pixels * 8 bits
+        public const int DisplayWidth = 512;  // 64 pixels * 8 bits
         /// <summary>
         /// Height of the display.
         /// </summary>
-        private const int DisplayHeight = 256;  // 32 pixels * 8 bits
+        public const int DisplayHeight = 256;  // 32 pixels * 8 bits
         /// <summary>
         /// 16-key hexadecimal keypad.
         /// </summary>

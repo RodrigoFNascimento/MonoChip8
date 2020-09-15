@@ -602,7 +602,7 @@ namespace Chip8.Chip8
                             // Fx29 - LD F, Vx - ADD I, Vx
                             // Set I = location of sprite for digit Vx.
                             // It's multiplied by 5 because each sprite is 5 bytes long.
-                            _i += (ushort)(_v[x] * 5);
+                            _i = (ushort)(_v[x] * 5);
                             break;
                         case 0x33:
                             // Fx33 - LD B, Vx

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.Audio;
+using System;
 using System.Collections;
 using System.Diagnostics;
 using System.IO;
@@ -62,7 +63,7 @@ namespace Chip8.Chip8
         /// This timer does nothing more than subtract 1 from the value of DT at a rate of 60Hz.
         /// When DT reaches 0, it deactivates.
         /// </summary>
-        private byte _delayTimer { get; set; }
+        private int _delayTimer { get; set; }
         /// <summary>
         /// The sound timer is active whenever the sound timer register (ST) is non-zero.
         /// This timer also decrements at a rate of 60Hz, however,
@@ -114,6 +115,15 @@ namespace Chip8.Chip8
             _sp = 0;
 
             Display = new bool[DisplayWidth, DisplayHeight];
+        }
+
+        /// <summary>
+        /// Loads a sound effect.
+        /// </summary>
+        /// <param name="sound">Sound effect.</param>
+        public void LoadSoundEffect(SoundEffect sound)
+        {
+            _speaker.LoadSoundEffect(sound);
         }
 
         /// <summary>
@@ -256,12 +266,12 @@ namespace Chip8.Chip8
             // In other words, every 60 frames our timers will decrement by 1.
             if (_delayTimer > 0)
             {
-                _delayTimer -= 1;
+                _delayTimer--;
             }
 
             if (_soundTimer > 0)
             {
-                _soundTimer -= 1;
+                _soundTimer--;
             }
         }
 
@@ -272,7 +282,7 @@ namespace Chip8.Chip8
         {
             if (_soundTimer > 0)
             {
-                _speaker.Play(440);
+                _speaker.Play();
             }
             else
             {
@@ -565,7 +575,7 @@ namespace Chip8.Chip8
                         case 0x07:
                             // Fx07 - LD Vx, DT
                             // Set Vx = delay timer value.
-                            _v[x] = _delayTimer;
+                            _v[x] = (byte)_delayTimer;
                             break;
                         case 0x0A:
                             // Fx0A - LD Vx, K
@@ -576,12 +586,12 @@ namespace Chip8.Chip8
                         case 0x15:
                             // Fx15 - LD DT, Vx
                             // Set delay timer = Vx.
-                            _delayTimer = _v[x];
+                            _delayTimer = _v[x] * 60;  // decrements at a rate of 60Hz
                             break;
                         case 0x18:
                             // Fx18 - LD ST, Vx
                             // Set sound timer = Vx.
-                            _soundTimer = _v[x];
+                            _soundTimer = _v[x] * 60;  // decrements at a rate of 60Hz
                             break;
                         case 0x1E:
                             // Fx1E - ADD I, Vx

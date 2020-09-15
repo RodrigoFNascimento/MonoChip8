@@ -13,6 +13,12 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin 02 Light Entertainment Audience, Che.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:02 Light Entertainment Audience, Che.wav;sound.wav
+
 #begin pixel.png
 /importer:TextureImporter
 /processor:TextureProcessor

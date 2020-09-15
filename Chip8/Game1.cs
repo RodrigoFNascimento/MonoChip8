@@ -1,5 +1,6 @@
 ﻿using Chip8.Chip8;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -59,6 +60,7 @@ namespace Chip8
             _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Brix [Andreas Gustafsson, 1990].ch8");
 
             _pixelTexture = Content.Load<Texture2D>("pixel");
+            _cpu.LoadSoundEffect(Content.Load<SoundEffect>("sound"));
         }
 
         /// <summary>

@@ -1,20 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.Xna.Framework.Audio;
 
 namespace Chip8.Chip8
 {
     public class Speaker
     {
-        // TODO: Check protection level
-        public void Play(int frequency)
+        private SoundEffect _soundEffect;
+        private SoundEffectInstance _soundEffectInstance;
+
+        public void LoadSoundEffect(SoundEffect sound)
         {
-            throw new NotImplementedException();
+            _soundEffect = sound;
+        }
+
+        public void Play()
+        {
+            if (_soundEffectInstance == null)
+                _soundEffectInstance = _soundEffect.CreateInstance();
+            if (_soundEffectInstance.State != SoundState.Playing)
+                _soundEffectInstance.Play();
         }
         
         public void Stop()
         {
-            //throw new NotImplementedException();
+            if (_soundEffectInstance == null)
+                _soundEffectInstance = _soundEffect.CreateInstance();
+            _soundEffectInstance.Stop();
         }
     }
 }

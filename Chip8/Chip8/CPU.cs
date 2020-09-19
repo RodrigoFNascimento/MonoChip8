@@ -586,12 +586,15 @@ namespace Chip8.Chip8
                         case 0x15:
                             // Fx15 - LD DT, Vx
                             // Set delay timer = Vx.
-                            _delayTimer = _v[x] * 60;  // decrements at a rate of 60Hz
+                            _delayTimer = _v[x];
                             break;
                         case 0x18:
                             // Fx18 - LD ST, Vx
                             // Set sound timer = Vx.
-                            _soundTimer = _v[x] * 60;  // decrements at a rate of 60Hz
+                            // _v[x] is usually 1, so in order to make the sound effect last a second,
+                            // _v[x] needs to be multiplied by 60 and decremented
+                            // at a rate of 1 per cycle.
+                            _soundTimer = _v[x] * 60;
                             break;
                         case 0x1E:
                             // Fx1E - ADD I, Vx

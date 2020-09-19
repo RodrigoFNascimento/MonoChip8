@@ -16,20 +16,14 @@ namespace Chip8
         private Texture2D _pixelTexture;
 
         private CPU _cpu { get; set; }
-        private Chip8.Keyboard _keyboard { get; set; }
-        private Speaker _speaker { get; set; }
 
         public Game1()
         {
             Window.AllowUserResizing = true;
 
             _graphics = new GraphicsDeviceManager(this);
-            _graphics.ApplyChanges();
 
-            _keyboard = new Chip8.Keyboard();
-            _speaker = new Speaker();
-
-            _cpu = new CPU(_keyboard, _speaker);
+            _cpu = new CPU(new Chip8.Keyboard(), new Speaker());
 
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
@@ -57,7 +51,7 @@ namespace Chip8
             // TODO: use this.Content to load your game content here
 
             _cpu.LoadSpritesIntoMemory();
-            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Brix [Andreas Gustafsson, 1990].ch8");
+            _cpu.LoadROM(@"C:\Users\rodri\source\repos\Chip8\Chip8\roms\Space Invaders [David Winter].ch8");
 
             _pixelTexture = Content.Load<Texture2D>("pixel");
             _cpu.LoadSoundEffect(Content.Load<SoundEffect>("sound"));

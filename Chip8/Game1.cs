@@ -37,6 +37,8 @@ namespace Chip8
         {
             // TODO: Add your initialization logic here
 
+            IsMouseVisible = false;
+
             _graphics.PreferredBackBufferWidth = CPU.DisplayWidth;
             _graphics.PreferredBackBufferHeight = CPU.DisplayHeight;
             _graphics.ApplyChanges();
@@ -70,9 +72,14 @@ namespace Chip8
         /// <param name="gameTime"></param>
         protected override void Update(GameTime gameTime)
         {
+            var keyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
-                || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
+                || keyboardState.IsKeyDown(Keys.Escape))
                 Exit();
+
+            if ((keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt)) && keyboardState.IsKeyDown(Keys.Enter))
+                _graphics.ToggleFullScreen();
 
             // Refer to the DisplayWidth formula
             PixelSize = _graphics.GraphicsDevice.Viewport.Width / (CPU.DisplayWidth / 8);

@@ -126,6 +126,16 @@ namespace Chip8.Chip8
             _speaker.LoadSoundEffect(sound);
         }
 
+        public void LowerSoundEffectVolume()
+        {
+            _speaker.LowerVolume();
+        }
+        
+        public void RaiseSoundEffectVolume()
+        {
+            _speaker.RaiseVolume();
+        }
+
         /// <summary>
         /// Loops through each byte in the sprites array and stores it in memory starting at hex 0x000.
         /// </summary>

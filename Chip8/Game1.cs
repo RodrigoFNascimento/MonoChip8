@@ -78,8 +78,15 @@ namespace Chip8
                 || keyboardState.IsKeyDown(Keys.Escape))
                 Exit();
 
+            // Toggle fulscreen
             if ((keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt)) && keyboardState.IsKeyDown(Keys.Enter))
                 _graphics.ToggleFullScreen();
+
+            // Volume controls
+            if (keyboardState.IsKeyDown(Keys.N))
+                _cpu.RaiseSoundEffectVolume();
+            else if (keyboardState.IsKeyDown(Keys.M))
+                _cpu.LowerSoundEffectVolume();
 
             // Refer to the DisplayWidth formula
             PixelSize = _graphics.GraphicsDevice.Viewport.Width / (CPU.DisplayWidth / 8);

@@ -8,14 +8,14 @@ namespace Chip8
 {
     public class Game1 : Game
     {
-        private const int PixelSize = 20;
-
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
         private Texture2D _pixelTexture;
 
         private CPU _cpu { get; set; }
+
+        private int PixelSize { get; set; }
 
         public Game1()
         {
@@ -37,12 +37,17 @@ namespace Chip8
         {
             // TODO: Add your initialization logic here
 
+            _graphics.PreferredBackBufferWidth = CPU.DisplayWidth;
+            _graphics.PreferredBackBufferHeight = CPU.DisplayHeight;
+            _graphics.ApplyChanges();
+
             base.Initialize();
         }
 
         /// <summary>
         /// This method is used to load your game content.
-        /// It is called only once per game, after Initialize method, but before the main game loop methods.
+        /// It is called only once per game, after Initialize method,
+        /// but before the main game loop methods.
         /// </summary>
         protected override void LoadContent()
         {
@@ -59,7 +64,8 @@ namespace Chip8
 
         /// <summary>
         /// This method is called multiple times per second,
-        /// and is used to update your game state (checking for collisions, gathering input, playing audio, etc.).
+        /// and is used to update your game state
+        /// (checking for collisions, gathering input, playing audio, etc.).
         /// </summary>
         /// <param name="gameTime"></param>
         protected override void Update(GameTime gameTime)
@@ -67,6 +73,9 @@ namespace Chip8
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
                 || Microsoft.Xna.Framework.Input.Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+
+            // Refer to the DisplayWidth formula
+            PixelSize = _graphics.GraphicsDevice.Viewport.Width / (CPU.DisplayWidth / 8);
 
             _cpu.Cycle();
 

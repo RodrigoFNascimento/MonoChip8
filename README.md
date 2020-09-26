@@ -5,12 +5,12 @@ A simple Chip-8 emulator (interpreter) built using Monogame to teach myself abou
 ## TODO:
 - Improve the keyboard mapping implementation.
 - Video
-  - Toggle fullscreen.
-  - Screen scaling.
+  - [ ] Toggle fullscreen.
+  - [X] Screen scaling.
 - UI
-  - Rom browser.
-  - Keyboard mapping screen.
-  - Maybe center screen or show the registers and opcodes.
+  - [ ] Rom browser.
+  - [ ] Keyboard mapping screen.
+  - [ ] Maybe center screen or show the registers and opcodes.
 - Audio
-  - Volume controls.
-  - Find a proper sound effect.
+  - [ ] Volume controls.
+  - [ ] Find a proper sound effect.

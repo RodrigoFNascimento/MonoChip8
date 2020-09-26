@@ -12,5 +12,5 @@ A simple Chip-8 emulator (interpreter) built using Monogame to teach myself abou
   - [ ] Keyboard mapping screen.
   - [ ] Maybe center screen or show the registers and opcodes.
 - Audio
-  - [ ] Volume controls.
+  - [X] Volume controls.
   - [ ] Find a proper sound effect.
